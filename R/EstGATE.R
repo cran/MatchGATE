@@ -1,0 +1,60 @@
+#' @title Estimating Group Average Treatment Effects
+#'
+#' @description When imputed values for \eqn{Y^1} and \eqn{Y^0} are available
+#'     for each individual, we can use \code{EstGATE} to estimate the
+#'     group average treatment effects (GATE) defined by
+#'     \deqn{GATE(z) = E[Y^1 - Y^0 | Z=z]}
+#'  for some for possible values \eqn{z} of \eqn{Z}.
+#'
+#' @param Y1_Y0 A vector in which each element is a treatment effect for each
+#'     individual.
+#'
+#' @param Z A subvector of the covariates \code{X}, which is used to define the subgroup
+#'     of interest.
+#' @param Zeval Vector of evaluation points of \code{Z}.
+#'
+#' @param h A smoothing parameter, bandwidth.
+#'
+#' @return The value of the corresponding GATE at different evaluation points.
+#'
+#' @export
+#'
+#'
+#' @examples
+#'
+#' set.seed(691)
+#' n <- 2000
+#' X1 <- runif(n, -0.5,0.5)
+#' X2 <- rnorm(n, sd = 0.5)
+#' X = cbind(X1, X2)
+#' A = sample(c(0,1), n, TRUE)
+#' Y0 <- X2 + X1*X2/2 + rnorm(n, sd = 0.25)
+#' Y1 <- A * (2*X1^2) + X2 + X1*X2/2 + rnorm(n, sd = 0.25)
+#' Y <- A * Y1 + (1-A)*Y0
+#' res.match <- match_y1y0(X, A, Y, K = 5)
+#' y1_y0 <- res.match$Y1 - res.match$Y0
+#' Z <- X1
+#' Zeval = seq(min(Z), max(Z), len = 101)
+#' h <- 0.5 * n^(-1/5)
+#' res <- EstGATE(Y1_Y0 = y1_y0, Z, Zeval, h = h)
+#' plot(x = Zeval, y = 2*Zeval^2,
+#'      type = "l", xlim = c(-0.6, 0.5),
+#'      main = "Estimated value vs. true value",
+#'      xlab = "Zeval", ylab = "GATE",
+#'      col = "DeepPink", lwd = "2")
+#' lines(x = res$Zeval, y = res$GATE,
+#'       col="DarkTurquoise", lwd = "2")
+#' legend('bottomleft', c("Estimated GATE","True GATE"),
+#'        col=c("DarkTurquoise","DeepPink"),
+#'        text.col=c("DarkTurquoise","DeepPink"), cex = 0.8)
+#'
+#'
+EstGATE <- function(Y1_Y0, Z, Zeval, h){
+
+  n <- length(Y1_Y0)
+
+  tau <- locPolSmootherC(x=Z, y= Y1_Y0, xeval= Zeval,
+                         bw= h, deg=0, kernel=EpaK)$beta0
+
+  return( data.frame(Zeval = Zeval, GATE = tau))
+}
